@@ -68,29 +68,19 @@
 
 (setf *random-state* (make-random-state t))
 
-(defvar *function-table* (zipmap '(and or nand nor not)
-                                 '(2   2  2    2   1  )))
+(defvar *function-table* (zipmap '(+  -  * /)
+                                 '(2  2  2 2)))
 
-(defvar *target-data* '((nil nil nil t)
-                        (nil nil t nil)
-                        (nil t nil nil)
-                        (nil t t t)
-                        (t nil nil nil)
-                        (t nil t t)
-                        (t t nil t)
-                        (t t t nil)))
+(defvar *target-data* '((0.0112558035966573 0.00987444022147894 0.533699367702128 0.544384208135945)
+                        (0.0101708421306285 0.00885034596011529 0.544384208135945 0.559177041733996)
+                        (0.0155032055675006 0.0190304101939686 0.559177041733996 0.58187837672216)
+                        (0.0270704723342726 0.0323007911284284 0.58187837672216 0.61058733418044)))
 
 (defun random-function ()
   (rand-nth (hash-keys *function-table*)))
 
 (defun random-terminal ()
   (rand-nth '(in1 in2 in3)))
-
-(defun nand (a b)
-  (not (and a b)))
-
-(defun nor (a b)
-  (not (or a b)))
 
 (defun random-code (depth)
   (if (or (zerop depth)
@@ -111,10 +101,9 @@
     (reduce #'+ (map 'list
                      (lambda (l)
                        (destructuring-bind (in1 in2 in3 correct_output) l
-                           (if (eq (funcall value-function in1 in2 in3)
-                                   correct_output)
-                               0
-                               1)))
+                         (handler-case (abs (- (funcall value-function in1 in2 in3)
+                                               correct_output))
+                           (division-by-zero () 99999))))
                      *target-data*))))
 
 (defun sort-by-error (population)
@@ -153,7 +142,7 @@
      for best = (car population)
      for best-error = (p-error best)
 
-     until (< best-error 0.1)
+     until (> generation 1000)
      do (progn
           (format t "=========================~%")
           (format t "Generation: ~a~%" generation)
@@ -168,5 +157,7 @@
                                              (map 'list
                                                   #'flatten population)))
                             (length population))))
-          (if (< best-error 0.1)
-              (format t "Success: ~a~%" best)))))
+          (if (< best-error 0.001)
+              (progn
+                (format t "Success: ~a~%" best)
+                (loop-finish))))))
