@@ -98,11 +98,14 @@ A numeric id or name is required unless the file contains a single worksheet."
 						      (car col-row) (cdr col-row) file entry-name))
 			     (cons col-row
 				   (cond ((equal type "e") (intern value "KEYWORD")) ;;ERROR
-					 ((equal type "str") value) ;; CALCULATED STRING
+					 ((equal type "str") (value)) ;; CALCULATED STRING
 					 ((equal type "s") (nth (parse-integer value) unique-strings))
 					 (date? (excel-date (parse-integer value)))
 					 (t (read-from-string value))))))))))
 
+(defun to-value (a)
+  (with-input-from-string (in (format nil "~a" a)) (read in)))
+					 
 (defun as-matrix (xlsx &optional na-string)
   "Creates an array from a list of cells of the form ((:A . 1) . 42)
 Empty columns or rows are ignored (column and row names are returned as additional values).
@@ -115,7 +118,13 @@ When a value is equal to na-string, nil is returned instead."
     (loop for ((col . row) . val) in xlsx
        do (setf (aref output (the fixnum (position row rows)) (the fixnum (position col cols)) )
 		(if (equal val na-string) nil val)))
-    (values output cols rows)))
+    (values output )));;cols rows)))
+	
+	
+(defun 2d-array-to-list (array)
+  (loop for i below (array-dimension array 0)
+        collect (loop for j below (array-dimension array 1)
+                      collect  (to-value (aref array i j)))))
 
 "################################################################################################################################################33"
 
@@ -131,6 +140,7 @@ When a value is equal to na-string, nil is returned instead."
 
 (defvar *REAL* ())
 
+
 "endcons: adiciona um valor no final de uma lista"
 (defun endcons (a v)
    (if (null v) (cons a nil) (cons (car v) (endcons a (cdr v)))))
@@ -145,6 +155,8 @@ When a value is equal to na-string, nil is returned instead."
 					(if (eq :C (car (car x))) (setf *ARIMA* (endcons (cdr x) *ARIMA*))
 						(if (eq :D (car (car x))) (setf *REAL* (endcons (cdr x) *REAL*)))))))
 	(setf *MLP* (cdr *MLP*) *SVR* (cdr *SVR*) *ARIMA* (cdr *ARIMA*) *REAL* (cdr *REAL*)))
+	
+	
 				
 				
 
