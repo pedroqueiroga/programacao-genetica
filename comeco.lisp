@@ -74,13 +74,16 @@
 (defvar *target-data* '((0.0112558035966573 0.00987444022147894 0.533699367702128 0.544384208135945)
                         (0.0101708421306285 0.00885034596011529 0.544384208135945 0.559177041733996)
                         (0.0155032055675006 0.0190304101939686 0.559177041733996 0.58187837672216)
-                        (0.0270704723342726 0.0323007911284284 0.58187837672216 0.61058733418044)))
+                        (0.0270704723342726 0.0323007911284284 0.58187837672216 0.61058733418044)
+                        (0.0365896732749262 0.0339778576482311 0.61058733418044 0.643567833442774)
+                        (0.0406992856331682 0.032385522692645 0.643567833442774 0.679223894124382)
+                        (0.0412599484172405 0.034057914225275 0.679223894124382 0.71609756075775)))
 
 (defun random-function ()
   (rand-nth (hash-keys *function-table*)))
 
 (defun random-terminal ()
-  (rand-nth '(in1 in2 in3)))
+  (rand-nth '(MLP SVM ARIMA)))
 
 (defun random-code (depth)
   (if (or (zerop depth)
@@ -97,13 +100,13 @@
   (replace-random-subtree p (random-subtree q)))
 
 (defun p-error (p)
-  (let ((value-function (eval (list 'lambda '(in1 in2 in3) p))))
+  (let ((value-function (eval (list 'lambda '(MLP SVM ARIMA) p))))
     (reduce #'+ (map 'list
                      (lambda (l)
-                       (destructuring-bind (in1 in2 in3 correct_output) l
-                         (handler-case (abs (- (funcall value-function in1 in2 in3)
+                       (destructuring-bind (MLP SVM ARIMA correct_output) l
+                         (handler-case (abs (- (funcall value-function MLP SVM ARIMA)
                                                correct_output))
-                           (division-by-zero () 99999))))
+                           (error () 99999))))
                      *target-data*))))
 
 (defun sort-by-error (population)
