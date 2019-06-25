@@ -1,83 +1,24 @@
+(load "xlsx-package.lisp")
+(load "xlsx.asd")
+(load "xlsx.lisp")
+(load "utils.lisp")
+
 (declaim (sb-ext:muffle-conditions style-warning))
-
-;; utils.lisp, enquanto nao sabemos separar os arquivos
-
-(defun zipmap (x y)
-  (let ((ht (make-hash-table)))
-    (mapcar #'(lambda (a b)
-                (setf (gethash a ht) b))
-            x y)
-    ht))
-
-(defun hash-keys (hash-table)
-  (loop for key being the hash-keys of hash-table collect key))
-
-(defun rand-nth (l)
-  (nth (random (length l)) l))
-
-(defun repeatedly (n f)
-  (loop repeat n
-     collect (funcall f)))
-
-(defun range (start end)
-  (loop for x from start to end collect x))
-
-(defun flatten (l)
-  (cond ((null l) nil)
-        ((atom  l) (list l))
-        (t (loop for a in l appending (flatten a)))))
-
-(defun codesize (p)
-  (cond ((null p) 0)
-        ((atom p) 1)
-        (t (reduce #'+ (mapcar #'codesize p)))))
-
-(defun rpt (n x)
-  (loop repeat n collect x))
-
-(defun random-subtree (p)
-  (if (zerop (random (codesize p)))
-      p
-      (random-subtree
-       (rand-nth (apply #'append
-                        (map 'list
-                             (lambda (x) (rpt (codesize x) x))
-                             (cdr p)))))))
-
-(defun replace-random-subtree (p replacement)
-  (if (zerop (random (codesize p)))
-      replacement
-      (let ((position-to-change
-             (rand-nth (apply #'append
-                              (map 'list
-                                   (lambda (x y) (rpt (codesize x) y))
-                                   (cdr p)
-                                   (range 1 (length (cdr p))))))))
-        (map 'list
-             (lambda (x y)
-               (if x
-                   (replace-random-subtree y replacement) y))
-             (loop for x in (range 0 (length p))
-                  collect (= x position-to-change))
-             p))))
-              
-                     
-
-;; EOF ---------------------------------------------------------------
-;; resto.lisp
 
 (setf *random-state* (make-random-state t))
 
 (defvar *function-table* (zipmap '(+  -  * /)
                                  '(2  2  2 2)))
 
-(defvar *target-data* '((0.0112558035966573 0.00987444022147894 0.533699367702128 0.544384208135945)
-                        (0.0101708421306285 0.00885034596011529 0.544384208135945 0.559177041733996)
-                        (0.0155032055675006 0.0190304101939686 0.559177041733996 0.58187837672216)
-                        (0.0270704723342726 0.0323007911284284 0.58187837672216 0.61058733418044)
-                        (0.0365896732749262 0.0339778576482311 0.61058733418044 0.643567833442774)
-                        (0.0406992856331682 0.032385522692645 0.643567833442774 0.679223894124382)
-                        (0.0412599484172405 0.034057914225275 0.679223894124382 0.71609756075775)))
+;;(defun define-target-data ()
+
+(defvar *target-data* '());; (0.0112558035966573 0.00987444022147894 0.533699367702128 0.544384208135945)
+                        ;; (0.0101708421306285 0.00885034596011529 0.544384208135945 0.559177041733996)
+                        ;; (0.0155032055675006 0.0190304101939686 0.559177041733996 0.58187837672216)
+                        ;; (0.0270704723342726 0.0323007911284284 0.58187837672216 0.61058733418044)
+                        ;; (0.0365896732749262 0.0339778576482311 0.61058733418044 0.643567833442774)
+                        ;; (0.0406992856331682 0.032385522692645 0.643567833442774 0.679223894124382)
+                        ;; (0.0412599484172405 0.034057914225275 0.679223894124382 0.71609756075775)))
 
 (defun random-function ()
   (rand-nth (hash-keys *function-table*)))
@@ -150,7 +91,7 @@
           (format t "=========================~%")
           (format t "Generation: ~a~%" generation)
           (format t "Best error: ~a~%" best-error)
-          (format t "Best program: ~a~%" best)
+          ;;(format t "Best program: ~a~%" best)
           (format t "     Median error: ~a~%" (p-error
                                                (nth (floor popsize 2)
                                                     population)))
@@ -164,3 +105,7 @@
               (progn
                 (format t "Success: ~a~%" best)
                 (loop-finish))))))
+
+(defun main (string popsize)
+  (setq *target-data* (xlsx:read-from-sheet string))
+  (evolve popsize))
