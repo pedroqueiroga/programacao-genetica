@@ -7,6 +7,12 @@
 
 (setf *random-state* (make-random-state t))
 
+(defvar *global-median-error* '())
+
+(defvar *global-program-length* '())
+
+(defvar *global-best-error* '())
+
 (defvar *function-table* (zipmap '(+  -  * /)
                                  '(2  2  2 2)))
 
@@ -85,27 +91,79 @@
                         (lambda () (select population 5)))))
      for best = (car population)
      for best-error = (p-error best)
-
+     for last-average-program-length = 
+       (float (/ (reduce #'+ (map 'list
+                                  #'length
+                                  (map 'list
+                                       #'flatten population)))
+                 (length population)))
+       
+     for last-median-error =
+       (p-error
+        (nth (floor popsize 2)
+             population))
+       
      until (> generation 1000)
      do (progn
           (format t "=========================~%")
           (format t "Generation: ~a~%" generation)
           (format t "Best error: ~a~%" best-error)
           ;;(format t "Best program: ~a~%" best)
-          (format t "     Median error: ~a~%" (p-error
-                                               (nth (floor popsize 2)
-                                                    population)))
+          (format t "     Median error: ~a~%"
+                  last-median-error)
           (format t "     Average program size: ~a~%"
-                  (float (/ (reduce #'+ (map 'list
-                                             #'length
-                                             (map 'list
-                                                  #'flatten population)))
-                            (length population))))
-          (if (< best-error 0.001)
+                  last-average-program-length)
+          (if (or (< best-error 0.001) (is-worsening
+                                        last-median-error
+                                        last-average-program-length
+                                        best-error))
               (progn
-                (format t "Success: ~a~%" best)
-                (loop-finish))))))
-
-(defun main (string popsize)
-  (setq *target-data* (xlsx:read-from-sheet string))
+                (format t "This is the end, friend: ~a~%" best)
+                (loop-finish))
+              (progn
+                (setf *global-program-length*
+                      (fixed-append *global-program-length*
+                                    last-average-program-length
+                                    20))
+                (setf *global-median-error*
+                      (fixed-append *global-median-error*
+                                    last-median-error
+                                    20))
+                (setf *global-best-error*
+                      (fixed-append *global-best-error* best-error 20)))))))
+  
+(defun main (sheet popsize)
+  (setq *target-data* (xlsx:read-from-sheet sheet))
   (evolve popsize))
+
+(defun set-sheet (sheet)
+  (setq *target-data* (xlsx:read-from-sheet sheet)))
+
+
+(defun fixed-append (l v max-len)
+  (cond ((= (length l) max-len) (append (cdr l) (list v)))
+        ((= (length l) 0) (list v))
+        (t (append l (list v)))))
+
+
+(defun average (l)
+  (if (= 0 (length l))
+      -9999
+      (/ (reduce '+ l) (length l))))
+
+(defun is-worsening (last-median last-length last-best)
+  ;; if the gain from last iteration was too small, too small being 0.1 for now
+  (and (<
+        (- (average *global-median-error*)
+           last-median)
+        0.1)
+       (>
+        (- last-length
+           (average *global-program-length*))
+        10)
+       (<
+        (- (average *global-best-error*)
+           last-best)
+        0.1)
+       (> (length *global-median-error*) 10)
+       (> (length *global-program-length*) 10)))
